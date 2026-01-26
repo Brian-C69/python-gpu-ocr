@@ -3,7 +3,7 @@ GPU-accelerated document -> text pipeline.
 
 Flow:
 1) Convert office docs (doc/docx/ppt/pptx) to PDF via LibreOffice headless.
-2) For each PDF page: extract digital text first. If weak/empty, render at high DPI and OCR.
+2) Render every PDF page at high DPI and OCR it (with preprocessing for tough scans).
 3) OCR pages are split round-robin across available GPUs (e.g., 3070 = cuda:0, 4060 = cuda:1).
 4) Save ordered text to output_txt/<stem>.txt.
 """
@@ -11,10 +11,8 @@ from __future__ import annotations
 
 import multiprocessing as mp
 import os
-import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 

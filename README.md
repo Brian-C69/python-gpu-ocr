@@ -1,6 +1,6 @@
 # Python GPU OCR (Dual GPU)
 
-Turn mixed office docs/PDFs/images into text using both GPUs. The pipeline tries digital text first, then OCRs only the image pages with heavy preprocessing for hard scans.
+Turn mixed office docs/PDFs/images into text using both GPUs. Every page/image is OCR’d with heavy preprocessing for hard scans.
 
 ## Prereqs
 - Windows + NVIDIA GPUs (3070 = `cuda:0`, 4060 = `cuda:1`)
@@ -16,6 +16,7 @@ python -m venv .venv
 pip install --upgrade pip
 pip install paddleocr paddlepaddle-gpu pypdfium2 opencv-python-headless numpy
 # If you prefer docx2pdf/pdf2image, add: pip install docx2pdf pdf2image
+# Optional: pip install pyinstaller (to build an .exe)
 ```
 
 ## Layout
@@ -25,6 +26,8 @@ python-gpu-ocr/
   working/     # auto: converted PDFs + rendered pages
   output_txt/  # auto: final text per source file
   process_folder.py
+  run.bat
+  process_folder.spec
 ```
 
 ## Run
@@ -35,6 +38,16 @@ python process_folder.py
 ```
 Devices default to `cuda:0` and `cuda:1`. Override with `CUDA_VISIBLE_DEVICES=0,1` if needed.
 
+### One-click (batch)
+- Double-click `run.bat` (expects `.venv` already created and dependencies installed).
+
+### Build an exe (optional, needs pyinstaller)
+```powershell
+.\.venv\Scripts\activate
+pyinstaller --onefile process_folder.spec
+```
+Output lands in `dist\process_folder.exe`. You can double-click it (runs in console).
+
 ## How it works
 1) Convert office docs to PDF via headless LibreOffice.
 2) Render every PDF page at 400 DPI → preprocess (upscale, denoise, CLAHE, adaptive threshold, morphology) → OCR with PaddleOCR (angle classifier on).
@@ -44,7 +57,6 @@ Devices default to `cuda:0` and `cuda:1`. Override with `CUDA_VISIBLE_DEVICES=0,
 Images dropped in `input/` are OCR’d directly (single page). Every page is OCR’d, even if it has digital text.
 
 ## Tuning
-- `MIN_TEXT_CHARS` (in script): raise/lower the “digital text is good enough” threshold.
 - `PDF_RENDER_DPI`: 350–400 is a good balance; raise for tiny text.
 - Preprocessing: adjust CLAHE/threshold/morphology in `preprocess_image` if scans differ.
 - PaddleOCR: set `lang="en"` (default) or other langs; bump `rec_image_shape` or `max_text_length` for long lines.
