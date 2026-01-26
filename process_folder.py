@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
-os.environ["DISABLE_MODEL_SOURCE_CHECK"] = "True"  # skip Paddle model host connectivity spam
+os.environ["DISABLE_MODEL_SOURCE_CHECK"] = "True"  # skip Paddle model host connectivity spam (where supported)
 
 import cv2
 import numpy as np
@@ -96,7 +96,8 @@ def get_ocr(device: str) -> PaddleOCR:
         _ocr_cache[device] = PaddleOCR(
             use_angle_cls=True,
             lang="en",
-            device=device,
+            use_gpu=True,
+            gpu_id=int(device.split(":")[1]),
         )
     return _ocr_cache[device]
 
@@ -170,12 +171,12 @@ def process_file(src: Path, devices: List[str]) -> None:
 
 
 def main() -> None:
-    # Detect GPUs from CUDA_VISIBLE_DEVICES or default to cuda:0, cuda:1
+    # Detect GPUs from CUDA_VISIBLE_DEVICES or default to gpu:0, gpu:1
     env_devices = os.environ.get("CUDA_VISIBLE_DEVICES")
     if env_devices:
-        devices = [f"cuda:{i}" for i in env_devices.split(",") if i.strip()]
+        devices = [f"gpu:{i}" for i in env_devices.split(",") if i.strip()]
     else:
-        devices = ["cuda:0", "cuda:1"]
+        devices = ["gpu:0", "gpu:1"]
 
     if not devices:
         print("No GPU devices configured. Set CUDA_VISIBLE_DEVICES or edit the devices list.", file=sys.stderr)

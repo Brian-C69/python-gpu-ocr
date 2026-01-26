@@ -15,7 +15,7 @@ py -3.10 -m venv .venv    # or py -3.11 if you installed Python 3.11
 .\.venv\Scripts\activate
 pip install --upgrade pip
 pip install paddlepaddle-gpu==2.6.1 -f https://www.paddlepaddle.org.cn/packages/stable/cu121/
-pip install paddleocr pypdfium2 opencv-python-headless numpy
+pip install paddleocr==2.7.0.0 numpy==1.26.4 opencv-python-headless==4.6.0.66 pypdfium2
 # If you prefer docx2pdf/pdf2image, add: pip install docx2pdf pdf2image
 # Optional: pip install pyinstaller (to build an .exe)
 ```
