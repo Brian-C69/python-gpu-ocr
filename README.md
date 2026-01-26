@@ -4,17 +4,18 @@ Turn mixed office docs/PDFs/images into text using both GPUs. Every page/image i
 
 ## Prereqs
 - Windows + NVIDIA GPUs (3070 = `cuda:0`, 4060 = `cuda:1`)
-- Python 3.10+ (recommended)
+- Python 3.10 or 3.11 (required for Paddle GPU wheels)
 - LibreOffice on PATH (`soffice`) for doc/docx/ppt/pptx → PDF
 - CUDA drivers + cuDNN (usual PaddleOCR GPU requirements)
 
 ## Install
 ```powershell
 cd C:\xampp\htdocs\python-gpu-ocr
-python -m venv .venv
+py -3.10 -m venv .venv    # or py -3.11 if you installed Python 3.11
 .\.venv\Scripts\activate
 pip install --upgrade pip
-pip install paddleocr paddlepaddle-gpu pypdfium2 opencv-python-headless numpy
+pip install paddlepaddle-gpu==2.6.1 -f https://www.paddlepaddle.org.cn/packages/stable/cu121/
+pip install paddleocr pypdfium2 opencv-python-headless numpy
 # If you prefer docx2pdf/pdf2image, add: pip install docx2pdf pdf2image
 # Optional: pip install pyinstaller (to build an .exe)
 ```
