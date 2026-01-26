@@ -16,12 +16,12 @@ import sys
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
+os.environ["DISABLE_MODEL_SOURCE_CHECK"] = "True"  # skip Paddle model host connectivity spam
+
 import cv2
 import numpy as np
 import pypdfium2
 from paddleocr import PaddleOCR
-
-os.environ.setdefault("DISABLE_MODEL_SOURCE_CHECK", "True")  # skip Paddle model host connectivity spam
 
 BASE_DIR = Path(__file__).parent
 INPUT_DIR = BASE_DIR / "input"
@@ -95,9 +95,8 @@ def get_ocr(device: str) -> PaddleOCR:
     if device not in _ocr_cache:
         _ocr_cache[device] = PaddleOCR(
             use_angle_cls=True,
-            use_gpu=True,
-            gpu_id=int(device.split(":")[1]),
-            rec_image_shape="3,48,320",
+            lang="en",
+            device=device,
         )
     return _ocr_cache[device]
 
