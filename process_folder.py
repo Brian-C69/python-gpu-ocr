@@ -21,6 +21,8 @@ import numpy as np
 import pypdfium2
 from paddleocr import PaddleOCR
 
+os.environ.setdefault("DISABLE_MODEL_SOURCE_CHECK", "True")  # skip Paddle model host connectivity spam
+
 BASE_DIR = Path(__file__).parent
 INPUT_DIR = BASE_DIR / "input"
 WORK_DIR = BASE_DIR / "working"
@@ -76,10 +78,10 @@ def preprocess_image(img_path: Path) -> Path:
 
 
 # --- PDF handling ---
-def render_page_to_image(pdf: pypdfium2.PdfDocument, page_index: int) -> Path:
+def render_page_to_image(pdf: pypdfium2.PdfDocument, pdf_stem: str, page_index: int) -> Path:
     page = pdf[page_index]
     bitmap = page.render(scale=PDF_RENDER_DPI / 72)
-    img_path = WORK_DIR / f"{Path(pdf.get_filepath()).stem}_p{page_index:04d}.png"
+    img_path = WORK_DIR / f"{pdf_stem}_p{page_index:04d}.png"
     bitmap.to_pil().save(img_path)
     bitmap.close()
     return img_path
@@ -127,8 +129,9 @@ def process_pdf_file(pdf_path: Path, devices: List[str]) -> None:
     ocr_items: List[Tuple[int, Path]] = []
 
     with pypdfium2.PdfDocument(str(pdf_path)) as pdf:
+        pdf_stem = pdf_path.stem
         for idx in range(len(pdf)):
-            img_path = render_page_to_image(pdf, idx)
+            img_path = render_page_to_image(pdf, pdf_stem, idx)
             ocr_items.append((idx, img_path))
 
     tasks = split_round_robin(ocr_items, devices)
