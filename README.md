@@ -8,6 +8,29 @@ Turn mixed office docs/PDFs/images into text using both GPUs. Every page/image i
 - LibreOffice on PATH (`soffice`) for doc/docx/ppt/pptx → PDF
 - CUDA drivers + cuDNN (usual PaddleOCR GPU requirements)
 
+### GPU runtime setup (pinned)
+- Use the included installers (see `INSTALLERS.md` for hashes):
+  - `cuda_11.8.0_522.06_windows.exe`
+  - `cudnn-windows-x86_64-8.6.0.163_cuda11-archive.zip`
+- Install CUDA 11.8 to `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8`.
+- Unzip cuDNN 8.6 and copy into the 11.8 toolkit:
+  - `bin\*` → `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8\bin\`
+  - `include\*` → `...\v11.8\include\`
+  - `lib\x64\*` → `...\v11.8\lib\x64\`
+- PATH is auto-prepended by `run.bat` and by `process_folder.py` (so Paddle finds cublas/cudnn/zlib). For manual shells, prepend:
+  ```
+  set PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8\lib\x64;%PATH%
+  ```
+- Verify in venv:
+  ```powershell
+  python - <<'PY'
+  import paddle
+  print(paddle.__version__)
+  print('CUDA', paddle.version.cuda(), 'cuDNN', paddle.version.cudnn())
+  PY
+  # Expect: 2.6.1, CUDA 11.8, cuDNN 8.6.x
+  ```
+
 ## Install
 ```powershell
 cd C:\xampp\htdocs\python-gpu-ocr
@@ -66,3 +89,4 @@ Images dropped in `input/` are OCR’d directly (single page). Every page is OCR
 - If LibreOffice isn’t on PATH, set the full path to `soffice` in `convert_to_pdf`.
 - For large batches, LibreOffice startup dominates doc conversion; consider batching runs.
 - If a page is digitally readable but still poor, force OCR by lowering `MIN_TEXT_CHARS` or adding a “force OCR” list. 
+- GPU DLL discovery is handled automatically by `run.bat` and `process_folder.py` (CUDA 11.8 + cuDNN 8.6 + zlib from Packet Tracer). If running from a raw shell, prepend the CUDA 11.8 bin/lib to PATH as shown above.
