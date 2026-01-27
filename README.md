@@ -58,7 +58,11 @@ python-gpu-ocr/
 ```powershell
 cd C:\xampp\htdocs\python-gpu-ocr
 .\.venv\Scripts\activate
+# Batch all files in input/
 python process_folder.py
+
+# Or pass explicit files (Codex-friendly single call)
+python process_folder.py input\Lecture 1.pdf input\Lecture 2.pdf --output-dir output_txt --devices 0,1
 ```
 Devices default to `cuda:0` and `cuda:1`. Override with `CUDA_VISIBLE_DEVICES=0,1` if needed.
 

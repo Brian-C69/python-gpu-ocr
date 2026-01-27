@@ -16,6 +16,8 @@ import sys
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
+import argparse
+
 os.environ["DISABLE_MODEL_SOURCE_CHECK"] = "True"  # skip Paddle model host connectivity spam (where supported)
 
 import cv2
@@ -191,21 +193,56 @@ def process_file(src: Path, devices: List[str]) -> None:
 
 
 def main() -> None:
-    # Detect GPUs from CUDA_VISIBLE_DEVICES or default to gpu:0, gpu:1
-    env_devices = os.environ.get("CUDA_VISIBLE_DEVICES")
-    if env_devices:
-        devices = [f"gpu:{i}" for i in env_devices.split(",") if i.strip()]
+    parser = argparse.ArgumentParser(description="GPU OCR pipeline (multi-GPU, PDF/image batch).")
+    parser.add_argument(
+        "inputs",
+        nargs="*",
+        type=Path,
+        help="Files to OCR (doc/docx/ppt/pptx/pdf/png/jpg/jpeg/tiff). If empty, use input/ folder.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=OUTPUT_DIR,
+        help=f"Directory to write text outputs (default: {OUTPUT_DIR})",
+    )
+    parser.add_argument(
+        "--devices",
+        type=str,
+        default=None,
+        help="Comma-separated GPU ids (e.g., 0,1). Defaults to env CUDA_VISIBLE_DEVICES or gpu:0,gpu:1",
+    )
+    args = parser.parse_args()
+
+    out_dir = args.output_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Detect GPUs from flag/env or default to gpu:0, gpu:1
+    if args.devices:
+        devices = [f"gpu:{i}" for i in args.devices.split(",") if i.strip()]
     else:
-        devices = ["gpu:0", "gpu:1"]
+        env_devices = os.environ.get("CUDA_VISIBLE_DEVICES")
+        if env_devices:
+            devices = [f"gpu:{i}" for i in env_devices.split(",") if i.strip()]
+        else:
+            devices = ["gpu:0", "gpu:1"]
 
     if not devices:
-        print("No GPU devices configured. Set CUDA_VISIBLE_DEVICES or edit the devices list.", file=sys.stderr)
+        print("No GPU devices configured. Set --devices or CUDA_VISIBLE_DEVICES or edit the devices list.", file=sys.stderr)
         sys.exit(1)
 
-    sources = [p for p in INPUT_DIR.iterdir() if p.suffix.lower() in SUPPORTED_DOCS]
+    if args.inputs:
+        sources = [p for p in args.inputs if p.suffix.lower() in SUPPORTED_DOCS]
+    else:
+        sources = [p for p in INPUT_DIR.iterdir() if p.suffix.lower() in SUPPORTED_DOCS]
+
     if not sources:
-        print(f"No input files found in {INPUT_DIR}")
+        print(f"No input files found in {INPUT_DIR}" if not args.inputs else "No valid input files provided.")
         return
+
+    # Allow overriding global output dir for this run.
+    global OUTPUT_DIR
+    OUTPUT_DIR = out_dir
 
     total = len(sources)
     for idx, src in enumerate(sources, start=1):
