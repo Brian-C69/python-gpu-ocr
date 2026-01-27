@@ -28,6 +28,21 @@ INPUT_DIR = BASE_DIR / "input"
 WORK_DIR = BASE_DIR / "working"
 OUTPUT_DIR = BASE_DIR / "output_txt"
 
+# Ensure required DLL paths are available (CUDA 11.8 + cuDNN 8.6 + zlib from Packet Tracer).
+# This helps Paddle find cublas/cudnn when launched outside run.bat.
+DLL_DIRS = [
+    Path(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8\bin"),
+    Path(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.8\lib\x64"),
+    Path(r"C:\Program Files\Cisco Packet Tracer 9.0.0\bin"),
+]
+for dll_dir in DLL_DIRS:
+    if dll_dir.exists():
+        try:
+            os.add_dll_directory(str(dll_dir))
+        except (FileNotFoundError, OSError):
+            pass
+        os.environ["PATH"] = f"{dll_dir};{os.environ.get('PATH', '')}"
+
 SUPPORTED_DOCS = {".doc", ".docx", ".ppt", ".pptx", ".pdf", ".png", ".jpg", ".jpeg", ".tiff"}
 PDF_RENDER_DPI = 400
 
@@ -130,10 +145,13 @@ def process_pdf_file(pdf_path: Path, devices: List[str]) -> None:
 
     with pypdfium2.PdfDocument(str(pdf_path)) as pdf:
         pdf_stem = pdf_path.stem
+        page_count = len(pdf)
+        print(f"[{pdf_path.name}] Rendering {page_count} pages to PNG at {PDF_RENDER_DPI} DPI...")
         for idx in range(len(pdf)):
             img_path = render_page_to_image(pdf, pdf_stem, idx)
             ocr_items.append((idx, img_path))
 
+    print(f"[{pdf_path.name}] OCR dispatch across GPUs: {', '.join(devices)}")
     tasks = split_round_robin(ocr_items, devices)
     with mp.Pool(len(tasks)) as pool:
         results = pool.map(ocr_images, tasks)
@@ -146,11 +164,12 @@ def process_pdf_file(pdf_path: Path, devices: List[str]) -> None:
     ordered = [text_map[i] for i in sorted(text_map)]
     out_file = OUTPUT_DIR / f"{pdf_path.stem}.txt"
     out_file.write_text("\n\n".join(ordered), encoding="utf-8")
-    print(f"✅ {pdf_path.name} -> {out_file}")
+    print(f"✅ {pdf_path.name} OCR complete ({len(ordered)} pages) -> {out_file}")
 
 
 def process_image_file(src: Path, devices: List[str]) -> None:
     # Treat a standalone image as a single-page doc.
+    print(f"[{src.name}] Single image OCR on devices: {', '.join(devices)}")
     items = [(0, src)]
     tasks = split_round_robin(items, devices)
     with mp.Pool(len(tasks)) as pool:
@@ -158,7 +177,7 @@ def process_image_file(src: Path, devices: List[str]) -> None:
     text = "\n".join(r[1] for r in results[0])
     out_file = OUTPUT_DIR / f"{src.stem}.txt"
     out_file.write_text(text, encoding="utf-8")
-    print(f"✅ {src.name} -> {out_file}")
+    print(f"✅ {src.name} OCR complete (1 page) -> {out_file}")
 
 
 def process_file(src: Path, devices: List[str]) -> None:
@@ -166,6 +185,7 @@ def process_file(src: Path, devices: List[str]) -> None:
         process_image_file(src, devices)
         return
 
+    print(f"[{src.name}] Converting to PDF via LibreOffice...")
     pdf_path = convert_to_pdf(src)
     process_pdf_file(pdf_path, devices)
 
@@ -187,9 +207,12 @@ def main() -> None:
         print(f"No input files found in {INPUT_DIR}")
         return
 
-    for src in sources:
+    total = len(sources)
+    for idx, src in enumerate(sources, start=1):
+        print(f"=== [{idx}/{total}] {src.name} ===")
         try:
             process_file(src, devices)
+            print(f"=== [{idx}/{total}] {src.name} done ===\n")
         except Exception as exc:
             print(f"❌ Failed on {src.name}: {exc}")
 

@@ -1,0 +1,20 @@
+# Python venv and build
+.venv/
+__pycache__/
+
+# Local installers/archives
+cuda_*.exe
+cudnn-*.zip
+cudnn-windows-*/
+
+# Processing artifacts
+input/
+working/
+output_txt/
+*.png
+*.prep.png
+
+# PyInstaller output
+dist/
+build/
+*.spec
