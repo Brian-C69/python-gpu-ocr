@@ -49,6 +49,7 @@ python-gpu-ocr/
   input/       # drop doc/docx/ppt/pptx/pdf/png/jpg here
   working/     # auto: converted PDFs + rendered pages
   output_txt/  # auto: final text per source file
+  delete_files.bat  # wipe contents of input/output_txt/working (keeps folders)
   process_folder.py
   run.bat
   process_folder.spec
@@ -65,9 +66,13 @@ python process_folder.py
 python process_folder.py input\Lecture 1.pdf input\Lecture 2.pdf --output-dir output_txt --devices 0,1
 ```
 Devices default to `cuda:0` and `cuda:1`. Override with `CUDA_VISIBLE_DEVICES=0,1` if needed.
+The script now prints a batch summary with start/end timestamps, success/fail counts, and total duration.
 
 ### One-click (batch)
 - Double-click `run.bat` (expects `.venv` already created and dependencies installed).
+
+### Quick cleanup
+- `delete_files.bat` removes all files inside `input`, `working`, and `output_txt` (keeps the folders). Double-click or run from repo root.
 
 ### Build an exe (optional, needs pyinstaller)
 ```powershell

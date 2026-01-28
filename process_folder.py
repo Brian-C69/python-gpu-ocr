@@ -9,14 +9,16 @@ Flow:
 """
 from __future__ import annotations
 
+import argparse
 import multiprocessing as mp
 import os
+import shutil
 import subprocess
 import sys
+import time
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
-
-import argparse
 
 os.environ["DISABLE_MODEL_SOURCE_CHECK"] = "True"  # skip Paddle model host connectivity spam (where supported)
 
@@ -53,13 +55,39 @@ for d in (INPUT_DIR, WORK_DIR, OUTPUT_DIR):
 
 
 # --- Conversion helpers ---
+def find_soffice_executable() -> str:
+    env_path = os.environ.get("SOFFICE_PATH")
+    if env_path:
+        env_candidate = Path(env_path)
+        if env_candidate.exists():
+            return str(env_candidate)
+
+    candidates = [
+        Path(r"C:\Program Files\LibreOffice\program\soffice.exe"),
+        Path(r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"),
+        Path(r"C:\Program Files\LibreOffice 7\program\soffice.exe"),
+        Path(r"C:\Program Files (x86)\LibreOffice 7\program\soffice.exe"),
+    ]
+    for cand in candidates:
+        if cand.exists():
+            return str(cand)
+    return "soffice"
+
+
 def convert_to_pdf(src: Path) -> Path:
     if src.suffix.lower() == ".pdf":
         return src
 
+    soffice_exec = find_soffice_executable()
+    if not Path(soffice_exec).exists() and shutil.which(soffice_exec) is None:
+        raise RuntimeError(
+            "LibreOffice/soffice not found. Install LibreOffice and ensure soffice.exe is on PATH, "
+            "or set SOFFICE_PATH to the soffice.exe location."
+        )
+
     out_pdf = WORK_DIR / f"{src.stem}.pdf"
     cmd = [
-        "soffice",
+        soffice_exec,
         "--headless",
         "--convert-to",
         "pdf",
@@ -193,6 +221,7 @@ def process_file(src: Path, devices: List[str]) -> None:
 
 
 def main() -> None:
+    global OUTPUT_DIR
     parser = argparse.ArgumentParser(description="GPU OCR pipeline (multi-GPU, PDF/image batch).")
     parser.add_argument(
         "inputs",
@@ -241,17 +270,30 @@ def main() -> None:
         return
 
     # Allow overriding global output dir for this run.
-    global OUTPUT_DIR
     OUTPUT_DIR = out_dir
 
+    start_wall = datetime.now()
+    start_perf = time.perf_counter()
+    success = 0
+    failed = 0
     total = len(sources)
     for idx, src in enumerate(sources, start=1):
         print(f"=== [{idx}/{total}] {src.name} ===")
         try:
             process_file(src, devices)
             print(f"=== [{idx}/{total}] {src.name} done ===\n")
+            success += 1
         except Exception as exc:
             print(f"❌ Failed on {src.name}: {exc}")
+            failed += 1
+
+    end_wall = datetime.now()
+    elapsed = time.perf_counter() - start_perf
+    print("=== Batch Summary ===")
+    print(f"Start time : {start_wall.isoformat(' ', timespec='seconds')}")
+    print(f"End time   : {end_wall.isoformat(' ', timespec='seconds')}")
+    print(f"Processed  : {success}/{total} files (failed: {failed})")
+    print(f"Duration   : {elapsed:.2f} seconds")
 
 
 if __name__ == "__main__":
