@@ -72,7 +72,7 @@ The script now prints a batch summary with start/end timestamps, success/fail co
 - Double-click `run.bat` (expects `.venv` already created and dependencies installed).
 
 ### Quick cleanup
-- `delete_files.bat` removes all files inside `input`, `working`, and `output_txt` (keeps the folders). Double-click or run from repo root.
+- `delete_files.bat` wipes and recreates `input`, `working`, and `output_txt`. Double-click to see progress and keep the console open (press any key to exit), or run from repo root.
 
 ### Build an exe (optional, needs pyinstaller)
 ```powershell
